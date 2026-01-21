@@ -27,16 +27,22 @@ jobs:
           pyinstaller --clean --noconfirm packaging\spbb_app.spec
 
       - name: Install Inno Setup
+        shell: pwsh
         run: |
           choco install innosetup -y
 
       - name: Build setup.exe (Inno Setup)
+        shell: pwsh
         run: |
-          iscc packaging\installer_inno.iss
+          $iscc = Join-Path ${env:ProgramFiles(x86)} "Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            throw "ISCC.exe not found: $iscc"
+          }
+          & $iscc "packaging\installer_inno.iss"
+          Get-ChildItem -Path "dist_installer" -ErrorAction SilentlyContinue | Format-List
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: setup
-          path: dist_installer\setup_蒜皮宝宝.exe
-
+          path: dist_installer\*.exe
