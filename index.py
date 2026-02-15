@@ -12,7 +12,6 @@ from PyQt6.QtGui import (
     QPixmap,
     QIcon,
     QPainter,
-    QPainterPath,
     QAction,
     QRegion,
     QMovie,
@@ -22,7 +21,6 @@ from PyQt6.QtGui import (
     QColor,
     QFont,
     QCursor,
-    QBrush,
 )
 from PyQt6.QtMultimedia import QAudioOutput, QMediaPlayer, QAudioSource, QMediaDevices, QAudioFormat
 
@@ -53,7 +51,6 @@ ROAM_TICK_MS = 16
 ROAM_SPEED_PX = 4
 CHASE_TICK_MS = 30
 CHASE_SPEED_PX = 6
-HEART_COUNT = 8
 # 动画刷新间隔 (毫秒)
 REFRESH_RATE = 80
 # 移动速度 (键盘控制时)
@@ -101,60 +98,6 @@ DEFAULT_ACTION_ORDER = ["attention", "love", "oMygad", "look"]
 # ===========================================
 
 ALL_PETS = []
-
-class HeartWidget(QWidget):
-    def __init__(self, x, y, size=20, parent=None):
-        super().__init__(None)
-        self.setWindowFlags(
-            Qt.WindowType.Window
-            | Qt.WindowType.FramelessWindowHint
-            | Qt.WindowType.WindowStaysOnTopHint
-            | Qt.WindowType.NoDropShadowWindowHint
-            | Qt.WindowType.Tool
-        )
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
-        self.setAttribute(Qt.WidgetAttribute.WA_MacAlwaysShowToolWindow, True)
-        self._size = size
-        self._vx = random.uniform(-3, 3)
-        self._vy = random.uniform(-5, -3)
-        self._alpha = 255
-        self.resize(size + 20, size + 20)
-        self.move(int(x - (size + 20) // 2), int(y - (size + 20) // 2))
-        self._timer = QTimer(self)
-        self._timer.setInterval(30)
-        self._timer.timeout.connect(self._animate)
-        self._timer.start()
-        self.show()
-
-    def _animate(self):
-        self._vy += 0.15
-        self.move(int(self.x() + self._vx), int(self.y() + self._vy))
-        self._alpha = max(0, self._alpha - 4)
-        if self._alpha <= 0:
-            self._timer.stop()
-            self.close()
-            self.deleteLater()
-        else:
-            self.update()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        color = QColor(255, 80, 120, self._alpha)
-        painter.setBrush(QBrush(color))
-        painter.setPen(Qt.PenStyle.NoPen)
-        self._draw_heart(painter, (self.width() - self._size) // 2, (self.height() - self._size) // 2, self._size)
-
-    def _draw_heart(self, painter, x, y, size):
-        path = QPainterPath()
-        path.moveTo(x + size / 2, y + size / 4)
-        path.cubicTo(x + size / 2, y, x, y, x, y + size / 4)
-        path.cubicTo(x, y + size / 2, x + size / 2, y + size * 0.75, x + size / 2, y + size)
-        path.cubicTo(x + size / 2, y + size * 0.75, x + size, y + size / 2, x + size, y + size / 4)
-        path.cubicTo(x + size, y, x + size / 2, y, x + size / 2, y + size / 4)
-        painter.drawPath(path)
-
 
 class MacGlobalKeyListener(QThread):
     keyPressed = pyqtSignal(int)
@@ -772,15 +715,6 @@ class DesktopPet(QWidget):
         nx = max(g.left(), min(nx, g.right() - self.width() + 1))
         ny = max(g.top(), min(ny, g.bottom() - self.height() + 1))
         self.move(nx, ny)
-
-    def _spawn_hearts(self):
-        center_x = self.x() + self.width() // 2
-        center_y = self.y() + self.height() // 2
-        for _ in range(HEART_COUNT):
-            size = 16 + random.randint(0, 8)
-            offset_x = random.randint(-30, 30)
-            offset_y = random.randint(-30, 10)
-            HeartWidget(center_x + offset_x, center_y + offset_y, size)
 
     def _start_mic(self):
         if not self._mic_available or self._mic_input is None:
@@ -1473,7 +1407,6 @@ class DesktopPet(QWidget):
                     i * interval_ms,
                     lambda hold=interval_ms: self._trigger_once("sly smile", hold_ms=hold),
                 )
-            self._spawn_hearts()
             event.accept()
 
     def enterEvent(self, event):
@@ -1509,7 +1442,6 @@ class DesktopPet(QWidget):
 
         if key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self._trigger_once("marry", hold_ms=1600)
-            self._append_input_text("↵", show_action=False)
             event.accept()
             return
 
